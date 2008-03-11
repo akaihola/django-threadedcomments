@@ -22,6 +22,7 @@ class ThreadedCommentForm(forms.ModelForm):
     class Meta:
         model = ThreadedComment
         fields = ('comment', 'markup')
+        exclude = ('markup', )
 
 class FreeThreadedCommentForm(forms.ModelForm):
     """
@@ -41,3 +42,4 @@ class FreeThreadedCommentForm(forms.ModelForm):
     class Meta:
         model = FreeThreadedComment
         fields = ('comment', 'name', 'website', 'email', 'markup')
+        exclude = ('markup', )
