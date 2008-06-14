@@ -1,6 +1,7 @@
 import re
 from django import template
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.utils.encoding import smart_str, force_unicode
 from django.utils.safestring import mark_safe
@@ -179,39 +180,75 @@ def do_get_threaded_comment_tree(parser, token):
     Gets a tree (list of objects ordered by preorder tree traversal, and with an
     additional ``depth`` integer attribute annotated onto each ``ThreadedComment``.
     """
+    error_string = "%r tag must be of format {%% get_threaded_comment_tree for OBJECT [TREE_ROOT] as CONTEXT_VARIABLE %%}" % token.contents.split()[0]
     try:
         split = token.split_contents()
     except ValueError:
-        raise template.TemplateSyntaxError, "%r tag must be of format {%% get_threaded_comment_tree for OBJECT as CONTEXT_VARIABLE %%}" % token.contents.split()[0]
-    return CommentTreeNode(split[2], split[4])
+        raise template.TemplateSyntaxError(error_string)
+    if len(split) == 5:
+        return CommentTreeNode(split[2], split[4], split[3])
+    elif len(split) == 6:
+        return CommentTreeNode(split[2], split[5], split[3])
+    else:
+        raise template.TemplateSyntaxError(error_string)
 
 def do_get_free_threaded_comment_tree(parser, token):
     """
     Gets a tree (list of objects ordered by traversing tree in preorder, and with an
     additional ``depth`` integer attribute annotated onto each ``FreeThreadedComment.``
     """
+    error_string = "%r tag must be of format {%% get_free_threaded_comment_tree for OBJECT [TREE_ROOT] as CONTEXT_VARIABLE %%}" % token.contents.split()[0]
     try:
         split = token.split_contents()
     except ValueError:
-        raise template.TemplateSyntaxError, "%r tag must be of format {%% get_free_threaded_comment_tree for OBJECT as CONTEXT_VARIABLE %%}" % token.contents.split()[0]
-    return FreeCommentTreeNode(split[2], split[4])
+        raise template.TemplateSyntaxError(error_string)
+    if len(split) == 5:
+        return FreeCommentTreeNode(split[2], split[4], split[3])
+    elif len(split) == 6:
+        return FreeCommentTreeNode(split[2], split[5], split[3])
+    else:
+        raise template.TemplateSyntaxError(error_string)
 
 class CommentTreeNode(template.Node):
-    def __init__(self, content_object, context_name):
+    def __init__(self, content_object, context_name, tree_root):
         self.content_object = template.Variable(content_object)
+        self.tree_root = template.Variable(tree_root)
+        self.tree_root_str = tree_root
         self.context_name = context_name
     def render(self, context):
         content_object = self.content_object.resolve(context)
-        context[self.context_name] = ThreadedComment.public.get_tree(content_object)
+        try:
+            tree_root = self.tree_root.resolve(context)
+        except template.VariableDoesNotExist:
+            if self.tree_root_str == 'as':
+                tree_root = None
+            else:
+                try:
+                    tree_root = int(self.tree_root_str)
+                except ValueError:
+                    tree_root = self.tree_root_str
+        context[self.context_name] = ThreadedComment.public.get_tree(content_object, root=tree_root)
         return ''
 
 class FreeCommentTreeNode(template.Node):
-    def __init__(self, content_object, context_name):
+    def __init__(self, content_object, context_name, tree_root):
         self.content_object = template.Variable(content_object)
+        self.tree_root = template.Variable(tree_root)
+        self.tree_root_str = tree_root
         self.context_name = context_name
     def render(self, context):
         content_object = self.content_object.resolve(context)
-        context[self.context_name] = FreeThreadedComment.public.get_tree(content_object)
+        try:
+            tree_root = self.tree_root.resolve(context)
+        except template.VariableDoesNotExist:
+            if self.tree_root_str == 'as':
+                tree_root = None
+            else:
+                try:
+                    tree_root = int(self.tree_root_str)
+                except ValueError:
+                    tree_root = self.tree_root_str
+        context[self.context_name] = FreeThreadedComment.public.get_tree(content_object, root=tree_root)
         return ''
 
 def do_get_comment_count(parser, token):
@@ -333,6 +370,50 @@ class LatestCommentsNode(template.Node):
         context[self.context_name] = comments
         return ''
 
+def do_get_user_comments(parser, token):
+    """
+    Gets all comments submitted by a particular user.
+    """
+    error_message = "%r tag must be of format {%% %r for OBJECT as CONTEXT_VARIABLE %%}" % (token.contents.split()[0], token.contents.split()[0])
+    try:
+        split = token.split_contents()
+    except ValueError:
+        raise template.TemplateSyntaxError, error_message
+    if len(split) != 5:
+        raise template.TemplateSyntaxError, error_message
+    return UserCommentsNode(split[2], split[4])
+
+class UserCommentsNode(template.Node):
+    def __init__(self, user, context_name):
+        self.user = template.Variable(user)
+        self.context_name = context_name
+    def render(self, context):
+        user = self.user.resolve(context)
+        context[self.context_name] = user.threadedcomment_set.all()
+        return ''
+
+def do_get_user_comment_count(parser, token):
+    """
+    Gets the count of all comments submitted by a particular user.
+    """
+    error_message = "%r tag must be of format {%% %r for OBJECT as CONTEXT_VARIABLE %%}" % (token.contents.split()[0], token.contents.split()[0])
+    try:
+        split = token.split_contents()
+    except ValueError:
+        raise template.TemplateSyntaxError, error_message
+    if len(split) != 5:
+        raise template.TemplateSyntaxError, error_message
+    return UserCommentCountNode(split[2], split[4])
+
+class UserCommentCountNode(template.Node):
+    def __init__(self, user, context_name):
+        self.user = template.Variable(user)
+        self.context_name = context_name
+    def render(self, context):
+        user = self.user.resolve(context)
+        context[self.context_name] = user.threadedcomment_set.all().count()
+        return ''
+
 register = template.Library()
 register.simple_tag(get_comment_url)
 register.simple_tag(get_comment_url_json)
@@ -346,10 +427,11 @@ register.filter('oneline', oneline)
 register.tag('auto_transform_markup', do_auto_transform_markup)
 register.tag('get_threaded_comment_tree', do_get_threaded_comment_tree)
 register.tag('get_free_threaded_comment_tree', do_get_free_threaded_comment_tree)
-register.tag('get_free_threaded_comment_tree', do_get_free_threaded_comment_tree)
 register.tag('get_comment_count', do_get_comment_count)
 register.tag('get_free_comment_count', do_get_free_comment_count)
 register.tag('get_free_threaded_comment_form', do_get_threaded_comment_form)
 register.tag('get_threaded_comment_form', do_get_threaded_comment_form)
 register.tag('get_latest_comments', do_get_latest_comments)
 register.tag('get_latest_free_comments', do_get_latest_comments)
+register.tag('get_user_comments', do_get_user_comments)
+register.tag('get_user_comment_count', do_get_user_comment_count)
