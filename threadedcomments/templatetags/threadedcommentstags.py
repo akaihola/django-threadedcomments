@@ -331,10 +331,12 @@ class ThreadedCommentFormNode(template.Node):
         self.context_name = context_name
         self.free = free
     def render(self, context):
+        ip = context['request'].META['REMOTE_ADDR']
+        unique_id = context['unique_id']
         if self.free:
-            form = FreeThreadedCommentForm()
+            form = FreeThreadedCommentForm(ip, unique_id)
         else:
-            form = ThreadedCommentForm()
+            form = ThreadedCommentForm(ip, unique_id)
         context[self.context_name] = form
         return ''
 

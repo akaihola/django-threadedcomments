@@ -268,6 +268,22 @@ comments to ``threadedcomments.models.ThreadedComment`` comments, and all
 Obviously, there can be no hierarchy data associated with those legacy comments,
 but future commenters can reply to those legacy comments just fine.
 
+Step 6: Adding optional spam prevention
+=======================================
+
+Add the magicforms.py_ module to your Python path and
+*django_threadedcomments* will use its ``MagicModelForm`` class as the
+base class for comment forms.  Forms will include two comment spam
+prevention measures as described on the web page.
+
+Note that fíam's original version requires the PyCrypto_ library.  A
+`forked version`_ which uses the Python standard library instead is also
+available.
+
+.. _magicforms.py: http://fi.am/entry/preventing-spam/
+.. _PyCrypto: http://www.dlitz.net/software/pycrypto/
+.. _`forked version`: http://github.com/akaihola/django-magicforms/commits/ditch-pycrypto
+
 Wrapping Up
 ===========
 

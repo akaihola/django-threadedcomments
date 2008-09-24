@@ -5,13 +5,27 @@ from models import FreeThreadedComment, ThreadedComment
 from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import ugettext_lazy as _
 
-class ThreadedCommentForm(forms.ModelForm):
+try:
+    # If magicforms.py from http://fi.am/entry/preventing-spam/ is available,
+    # use MagicModelForm as the base class for forms and get some spam
+    # prevention for free.
+    import magicforms
+    ModelForm = magicforms.MagicModelForm
+except ImportError:
+    ModelForm = forms.ModelForm
+
+class ThreadedCommentForm(ModelForm):
     """
     Form which can be used to validate data for a new ThreadedComment.
     It consists of just two fields: ``comment``, and ``markup``.
     
     The ``comment`` field is the only one which is required.
     """
+
+    def __init__(self, remote_ip, unique_id, *args, **kwargs):
+        if isinstance(self, magicforms.MagicModelForm):
+            args = (remote_ip, unique_id,) + args
+        super(ThreadedCommentForm, self).__init__(*args, **kwargs)
 
     comment = forms.CharField(
         label = _('comment'),
@@ -21,9 +35,11 @@ class ThreadedCommentForm(forms.ModelForm):
 
     class Meta:
         model = ThreadedComment
-        fields = ('comment', 'markup')
+        exclude = ('content_type', 'object_id', 'content_object', 'parent',
+                   'user', 'date_submitted', 'date_modified', 'date_approved',
+                   'is_public', 'is_approved', 'ip_address')
 
-class FreeThreadedCommentForm(forms.ModelForm):
+class FreeThreadedCommentForm(ModelForm):
     """
     Form which can be used to validate data for a new FreeThreadedComment.
     It consists of just a few fields: ``comment``, ``name``, ``website``,
@@ -31,6 +47,11 @@ class FreeThreadedCommentForm(forms.ModelForm):
     
     The fields ``comment``, and ``name`` are the only ones which are required.
     """
+
+    def __init__(self, remote_ip, unique_id, *args, **kwargs):
+        if isinstance(self, magicforms.MagicModelForm):
+            args = (remote_ip, unique_id,) + args
+        super(FreeThreadedCommentForm, self).__init__(*args, **kwargs)
 
     comment = forms.CharField(
         label = _('comment'),
@@ -40,4 +61,6 @@ class FreeThreadedCommentForm(forms.ModelForm):
 
     class Meta:
         model = FreeThreadedComment
-        fields = ('comment', 'name', 'website', 'email', 'markup')
+        exclude = ('content_type', 'object_id', 'content_object', 'parent',
+                   'date_submitted', 'date_modified', 'date_approved',
+                   'is_public', 'is_approved', 'ip_address')

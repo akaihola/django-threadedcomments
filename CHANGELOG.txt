@@ -1,3 +1,11 @@
+Version 0.4-magicforms, 24th September 2008
+-------------------------------------------
+
+Added support for simple spam prevention if the magicforms.py[1]
+module is found.
+
+[1] http://fi.am/entry/preventing-spam/
+
 Version 0.4, 7th March 2008
 ---------------------------
 

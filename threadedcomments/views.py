@@ -38,16 +38,20 @@ def _get_next(request):
         raise Http404 # No next url was supplied in GET or POST.
     return next
 
-def _preview(request, context_processors, extra_context, form_class=ThreadedCommentForm):
+def _preview(request, unique_id, context_processors, extra_context, form_class=ThreadedCommentForm):
     """
     Returns a preview of the comment so that the user may decide if he or she wants to
     edit it before submitting it permanently.
+
+    The remote IP address and ``unique_id`` are used for spam prevention with
+    magicforms. When used without magicforms, their values are discarded.
     """
     _adjust_max_comment_length(form_class)
-    form = form_class(request.POST or None)
+    form = form_class(request.META.get('REMOTE_ADDR'), unique_id, request.POST or None)
     context = {
         'next' : _get_next(request),
         'form' : form,
+        'unique_id': unique_id,
     }
     if form.is_valid():
         new_comment = form.save(commit=False)
@@ -73,17 +77,21 @@ def free_comment(request, content_type=None, object_id=None, edit_id=None, paren
     
     If invalid POST data is submitted, this will go to the comment preview page
     where the comment may be edited until it does not contain errors.
+
+    The remote IP address and ``unique_id`` are used for spam prevention with
+    magicforms. When used without magicforms, their values are discarded.
     """
     if not edit_id and not (content_type and object_id):
         raise Http404 # Must specify either content_type and object_id or edit_id
+    unique_id = (edit_id, content_type, object_id)
     if "preview" in request.POST:
-        return _preview(request, context_processors, extra_context, form_class=form_class)
+        return _preview(request, unique_id, context_processors, extra_context, form_class=form_class)
     if edit_id:
         instance = get_object_or_404(model, id=edit_id)
     else:
         instance = None
     _adjust_max_comment_length(form_class)
-    form = form_class(request.POST, instance=instance)
+    form = form_class(request.META.get('REMOTE_ADDR'), unique_id, request.POST, instance=instance)
     if form.is_valid():
         new_comment = form.save(commit=False)
         if not edit_id:
@@ -125,7 +133,7 @@ def free_comment(request, content_type=None, object_id=None, edit_id=None, paren
         response_str = Template(template_str).render(Context({'errors' : zip(form.errors.values(), form.errors.keys())}))
         return XMLResponse(response_str, is_iterable=False)
     else:
-        return _preview(request, context_processors, extra_context, form_class=form_class)
+        return _preview(request, unique_id, context_processors, extra_context, form_class=form_class)
       
 def comment(*args, **kwargs):
     """

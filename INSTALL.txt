@@ -11,3 +11,12 @@ Python path; this is useful if you're working from a Subversion checkout.
 Note that this application requires Python 2.3 or later, and Django later than
 0.96. You can obtain Python from http://www.python.org/ and Django from 
 http://www.djangoproject.com/.
+
+For simple spam prevention, install magicforms.py[1] in your Python
+path and threadedcomments will use it automatically.  To drop the
+dependency on the PyCrypto[2] library, a forked version is also
+available[3].
+
+[1] http://fi.am/entry/preventing-spam/
+[2] http://www.dlitz.net/software/pycrypto/
+[3] http://github.com/akaihola/django-magicforms/commits/ditch-pycrypto
