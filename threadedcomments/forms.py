@@ -9,9 +9,10 @@ try:
     # If magicforms.py from http://fi.am/entry/preventing-spam/ is available,
     # use MagicModelForm as the base class for forms and get some spam
     # prevention for free.
-    import magicforms
-    ModelForm = magicforms.MagicModelForm
+    from magicforms import MagicModelForm
+    ModelForm = MagicModelForm
 except ImportError:
+    class MagicModelForm: pass
     ModelForm = forms.ModelForm
 
 class ThreadedCommentForm(ModelForm):
@@ -23,7 +24,7 @@ class ThreadedCommentForm(ModelForm):
     """
 
     def __init__(self, remote_ip, unique_id, *args, **kwargs):
-        if isinstance(self, magicforms.MagicModelForm):
+        if isinstance(self, MagicModelForm):
             args = (remote_ip, unique_id,) + args
         super(ThreadedCommentForm, self).__init__(*args, **kwargs)
 
@@ -49,7 +50,7 @@ class FreeThreadedCommentForm(ModelForm):
     """
 
     def __init__(self, remote_ip, unique_id, *args, **kwargs):
-        if isinstance(self, magicforms.MagicModelForm):
+        if isinstance(self, MagicModelForm):
             args = (remote_ip, unique_id,) + args
         super(FreeThreadedCommentForm, self).__init__(*args, **kwargs)
 
