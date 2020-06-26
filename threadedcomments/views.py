@@ -1,16 +1,13 @@
-from django.http import HttpResponse, HttpResponseRedirect, Http404
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.http import HttpResponseRedirect, Http404
+from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
 from django.shortcuts import get_object_or_404, render_to_response
-from django.forms.util import ErrorDict
-from django.utils.encoding import smart_unicode, force_unicode
-from django.utils.safestring import mark_safe
 from django.template import RequestContext, Context, Template
 from django.utils.http import urlquote
 from django.conf import settings
-from forms import FreeThreadedCommentForm, ThreadedCommentForm
-from models import ThreadedComment, FreeThreadedComment, DEFAULT_MAX_COMMENT_LENGTH
-from utils import JSONResponse, XMLResponse
+from threadedcomments.forms import FreeThreadedCommentForm, ThreadedCommentForm
+from threadedcomments.models import ThreadedComment, FreeThreadedComment, DEFAULT_MAX_COMMENT_LENGTH
+from threadedcomments.utils import JSONResponse, XMLResponse
 
 def _adjust_max_comment_length(form, field_name='comment'):
     """
